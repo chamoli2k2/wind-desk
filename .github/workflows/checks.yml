@@ -1,0 +1,28 @@
+name: checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: docker build -t wind-desk .
+      - name: Container smoke test
+        run: |
+          docker run -d --name wind-desk -p 10000:10000 wind-desk
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://localhost:10000/api/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:10000/ > /dev/null
+          curl -fsS http://localhost:10000/api/analysis > /tmp/analysis.json
+          python -c "import json; assert json.load(open('/tmp/analysis.json'))['metrics']['n'] == 744"

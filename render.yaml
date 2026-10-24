@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wind-desk
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: WEB_CONCURRENCY
+        value: "2"
